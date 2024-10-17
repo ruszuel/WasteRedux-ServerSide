@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fetch Data on Button Click</title>
+</head>
+<body>
+
+    <h1>Click the button to fetch data</h1>
+    <button id="fetchButton">Fetch Data</button>
+
+    <div id="dataDisplay"></div>
+
+    <script>
+        document.getElementById('fetchButton').addEventListener('click', function() {
+            // Example API URL
+            const apiUrl = 'http://localhost:3000/user';
+
+            // Fetch data from the API
+            fetch(apiUrl)
+                .then(response => response.json())  // Convert response to JSON
+                .then(data => {
+                    // Display the data
+                    console.log(data)
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                });
+        });
+    </script>
+
+</body>
+</html>
