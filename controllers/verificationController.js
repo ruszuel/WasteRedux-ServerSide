@@ -72,7 +72,7 @@ const otpVerification = async (req, res) => {
                 }
 
                 if(data.length > 0) {
-                    connection.query("UPDATE otp SET otp_code=?, expiry=?, attemps=? WHERE email_address=?", [OTP, expirationTime, count, email_address], (err) => {
+                    connection.query("UPDATE otp SET otp_code=?, expiry=?, expiry_date = ?, attemps=? WHERE email_address=?", [OTP, expirationTime, expirationDay, count, email_address], (err) => {
                         if(err) return res.status(401).send(err)
                     })
                     return res.sendStatus(200)

@@ -241,4 +241,13 @@ const registerWaste = (req, res) => {
     
 }
 
-export default {display, insert, login, verification, verifyEmail, logout, profile, updateProfile, changePassword, registerWaste, firstTime, autoLogin}
+const resetPass = async (req, res) => {
+    const {new_pass, email_address} = req.body
+    const hashedPass = await bcrypt.hash(new_pass, 12)
+    connection.query("UPDATE users SET user_password = ? WHERE email_address = ?", [hashedPass, email_address], (err) => {
+        if(err) return res.status(403).send(err)
+        return res.sendStatus(200)
+    })
+}
+
+export default {display, insert, login, verification, verifyEmail, logout, profile, updateProfile, changePassword, registerWaste, firstTime, autoLogin, resetPass}

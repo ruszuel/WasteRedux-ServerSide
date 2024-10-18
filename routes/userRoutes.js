@@ -21,5 +21,6 @@ route.post('/register_waste', upload.single('image'), userController.registerWas
 route.get('/first_time', userController.firstTime)
 route.get('/logout', userController.logout)
 route.post('/auto_login', userController.autoLogin)
+route.patch('/reset_pass', userController.resetPass)
 
 export default route;
