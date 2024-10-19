@@ -4,14 +4,14 @@ import userRoutes from './routes/userRoutes.js'
 import session from 'express-session'
 import dotenv from 'dotenv'
 import MySQLStore from 'express-mysql-session';
-import mysql from 'mysql2'
+import mysql from 'mysql2/promise'
 
 dotenv.config()
 const app = express();
 const port = 3000;
 
 const options = {
-  host: 'localhost',
+  host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME
