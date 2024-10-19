@@ -1,32 +1,39 @@
-import connection from '../model/database_config.js';
+import database_config from '../model/database_config.js';
 import bcrypt from 'bcrypt';
 import nodemailer from 'nodemailer'
 import dotenv from 'dotenv'
 import jwt from 'jsonwebtoken'
 
+const promisePool = database_config.promisePool
 dotenv.config();
-const display =  (req, res) => {
-    connection.query('SELECT * from users', (err, result) =>{
-        if (err) throw err;
+const display = async (req, res) => {
+    try{
+        const [result] = await promisePool.query('SELECT * from users')  
         res.json(result)
-        console.log(process.env.EMAIL)
-    })  
+    }catch(err){
+        console.error('Error inserting data:', err);
+        res.status(500).send('Internal Server Error');
+    }
 }
 
 const insert = async (req, res) => {
     const receivedData = req.body
     console.log(receivedData)
-    const hashedPass = await bcrypt.hash(receivedData.user_password, 12)
-    connection.query('INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?)', [receivedData.first_name, receivedData.last_name, receivedData.email_address, receivedData.college_department, hashedPass, false, true], (err) => {
-        if (err) throw err;
-        res.status(200).send('inserted successfully')
-    })
+    try{
+        const hashedPass = await bcrypt.hash(receivedData.user_password.trim(), 12)
+        console.log(hashedPass)
+        await promisePool.query('INSERT INTO users (first_name, last_name, email_address, college_department, user_password, isVerified, isFirstTime) VALUES (?, ?, ?, ?, ?, ?, ?)', [receivedData.first_name, receivedData.last_name, receivedData.email_address, receivedData.college_department, hashedPass, false, true])
+        res.status(200).send('inserted successfully') 
+    }catch(err){
+        console.error('Error inserting data:', err);
+        res.status(500).send('Internal Server Error');
+    }
 }
 
-const login = (req, res) => {
+const login = async (req, res) => {
     const {email_address, user_password, rememberme} = req.body
-    connection.query('SELECT * from users WHERE email_address = ?', [email_address], async (err, result) => {
-        if (err) throw err;
+    try{
+        const [result] = await promisePool.query('SELECT * from users WHERE email_address = ?', [email_address])
 
         console.log(email_address)
         if(result.length === 0){
@@ -40,8 +47,8 @@ const login = (req, res) => {
             return
         }
 
-        const userPass = result[0].user_password
-        const isValid = await bcrypt.compare(user_password, userPass.toString())
+        const isValid = await bcrypt.compare(user_password.trim(), result[0].user_password)
+        console.log(result[0].user_password, user_password)
         if(!isValid){
             res.status(401).send('Wrong password')
             return
@@ -61,46 +68,54 @@ const login = (req, res) => {
                 }
                 return res.sendStatus(200)
             })
-        }
-    })  
+        } 
+    }catch(err){
+        if (err) throw err;
+    }
+ 
 }
 
-const firstTime = (req, res) => {
+const firstTime = async (req, res) => {
     if(!req.session.email) return res.sendStatus(401)
 
-    connection.query("UPDATE users SET isFirstTime = ? WHERE email_address =?", [0, req.session.email], (err) => {
-        if (err) return res.status(400).send('Error updating data')
-       
-        connection.query('SELECT * from users WHERE email_address = ?', [req.session.email], async (err, result) => {
-            if(err) return res.status(500).send(err)
-            
-            delete req.session.email
-            req.session.regenerate((err) => {
-                if (err) return res.status(500).send("Failed regenerating session")
-                req.session.user = result[0]
-                if(rememberme){     
-                    req.session.cookie.maxAge = 7 * 24 * 60 * 60 * 1000
-                    return res.status(200).json({sessionId: req.session.id})
-                }
-                return res.sendStatus(200)
-            })
-        })
-    })
-}
+    try {
+        await promisePool.query("UPDATE users SET isFirstTime = ? WHERE email_address =?", [0, req.session.email])
 
-const autoLogin = (req, res) => {
-    const {auto_id} = req.body
+       const[result] = await promisePool.query('SELECT * from users WHERE email_address = ?', [req.session.email])
+       delete req.session.email
 
-    connection.query("SELECT * FROM sessions WHERE session_id=?", [auto_id], (err, result) => {
-        if(err) return res.status(500).send(err)
-        
-        if(result.length === 0){
-            return res.status(201).send("Session expired")
+       req.session.regenerate((err) => {
+        if (err) return res.status(500).send("Failed regenerating session")
+        req.session.user = result[0]
+        if(rememberme){     
+            req.session.cookie.maxAge = 7 * 24 * 60 * 60 * 1000
+            return res.status(200).json({sessionId: req.session.id})
         }
         return res.sendStatus(200)
-
     })
+    } catch (err) {
+        if (err.code === 'ER_NO_REFERENCED_ROW_2') {
+            return res.status(404).send('User not found');
+        }
+        return res.status(500).send(err);
+    } 
 }
+
+const autoLogin = async (req, res) => {
+    const { auto_id } = req.body;
+
+    try {
+        const [result] = await promisePool.query("SELECT * FROM sessions WHERE session_id = ?", [auto_id]);
+
+        if (result.length === 0) {
+            return res.status(201).send("Session expired");
+        }
+
+        return res.sendStatus(200);
+    } catch (err) {
+        return res.status(500).send(err);
+    }
+};
 
 const email = process.env.EMAIL;
 const pass = process.env.EMAIL_PASSWORD;
@@ -136,21 +151,26 @@ const verification = (req, res) => {
 
 }
 
-const verifyEmail = (req, res) => {
-    const { token } = req.params
+const verifyEmail = async (req, res) => {
+    const { token } = req.params;
 
-    jwt.verify(token, process.env.SECRET_ACCESS_TOKEN, (err, data) => {
-        if(err){
-            res.sendStatus(401)
-            return
-        }
-        connection.query('UPDATE users SET isVerified = ? WHERE email_address = ?', [true, data.email], (err) => {
-            if (err) 
-                console.log(err)
-        })
-        res.sendStatus(200)
-    })
-}
+    try {
+        const data = await new Promise((resolve, reject) => {
+            jwt.verify(token, process.env.SECRET_ACCESS_TOKEN, (err, decoded) => {
+                if (err) {
+                    return reject(err);
+                }
+                resolve(decoded);
+            });
+        });
+
+        await promisePool.query('UPDATE users SET isVerified = ? WHERE email_address = ?', [true, data.email]);
+        return res.sendStatus(200);
+    } catch (err) {
+        console.error(err);
+        return res.sendStatus(401);
+    }
+};
 
 const logout = (req, res) => {
     if(!req.session.user) return res.sendStatus(401)
@@ -163,25 +183,29 @@ const logout = (req, res) => {
     })
 }
 
-const profile = (req, res) => {
-    if(!req.session.user) return res.sendStatus(401)
-    const mail = req.session.user.email_address
-    connection.query("SELECT * FROM users where email_address = ?", [mail], (err, data) => {
-        if(err) return res.status(400).send(err)
+const profile = async (req, res) => {
+    if (!req.session.user) return res.sendStatus(401);
+
+    const mail = req.session.user.email_address;
+
+    try {
+        const [data] = await promisePool.query("SELECT * FROM users WHERE email_address = ?", [mail]);
 
         const modified = data.map(user => ({
-            ...user, 
-            profile_picture: user.profile_picture ? `data:${user.picture_format};base64,${user.profile_picture.toString('base64')}`: null
-        }))
-        return res.status(200).send(modified)
-    })
-    
-}
+            ...user,
+            profile_picture: user.profile_picture ? `data:${user.picture_format};base64,${user.profile_picture.toString('base64')}` : null
+        }));
 
-const updateProfile = (req, res) => {
-    if(!req.session.user) return res.sendStatus(401)
+        return res.status(200).send(modified);
+    } catch (err) {
+        return res.status(400).send(err);
+    }
+};
 
-    const {first_name, last_name} = req.body
+const updateProfile = async (req, res) => {
+    if (!req.session.user) return res.sendStatus(401);
+
+    const { first_name, last_name } = req.body;
 
     let updateQuery = "UPDATE users SET first_name = ?, last_name = ?";
     let queryParams = [first_name, last_name];
@@ -189,65 +213,81 @@ const updateProfile = (req, res) => {
     if (req.file) {
         updateQuery += ", profile_picture = ?, picture_format = ?";
         queryParams.push(req.file.buffer);
-        queryParams.push(req.file.mimetype)
+        queryParams.push(req.file.mimetype);
     }
 
     updateQuery += " WHERE email_address = ?";
     queryParams.push(req.session.user.email_address);
 
-    connection.query(updateQuery, queryParams, (err, result) => {
-        if (err) return res.status(403).json(err)
-        return res.status(200).send(result)
-    })
-}
+    try {
+        const [result] = await promisePool.query(updateQuery, queryParams);
+        return res.status(200).send(result);
+    } catch (err) {
+        return res.status(403).json(err);
+    }
+};
 
 const changePassword = async (req, res) => {
-    if(!req.session.user)
-        return res.sendStatus(401)
-
-    const {new_password, old_password} = req.body
-    const isValid = await bcrypt.compare(old_password, req.session.user.user_password)
-    if(!isValid){
-        return res.sendStatus(403)
-    }else{
-        const newPass = await bcrypt.hash(new_password, 12)
-        connection.query("UPDATE users SET user_password = ? WHERE email_address = ?", [newPass, req.session.user.email_address], (err, result) => {
-            if (err) return res.status(403).send(err)
-            return res.sendStatus(200)
-        })
+    if (!req.session.user) {
+        return res.sendStatus(401);
     }
-}
 
-const registerWaste = (req, res) => {
-    if(!req.session.user) return res.sendStatus(401)
+    const { new_password, old_password } = req.body;
+
+    try {
+        const isValid = await bcrypt.compare(old_password, req.session.user.user_password);
+        if (!isValid) {
+            return res.sendStatus(403);
+        }
+
+        const newPass = await bcrypt.hash(new_password, 12);
+        await promisePool.query("UPDATE users SET user_password = ? WHERE email_address = ?", [newPass, req.session.user.email_address]);
+
+        return res.sendStatus(200);
+    } catch (err) {
+        return res.status(403).send(err);
+    }
+};
+
+const registerWaste = async (req, res) => {
+    if (!req.session.user) return res.sendStatus(401);
 
     const curDate = new Date();
     const year = curDate.getFullYear();
     const month = String(curDate.getMonth() + 1).padStart(2, '0');
     const day = String(curDate.getDate()).padStart(2, '0');
     const registered_date = `${year}-${month}-${day}`;
-    
-    const {category} = req.body
-    const img = req.file
-    if(!img){
-        return res.sendStatus(204)
+
+    const { category } = req.body;
+    const img = req.file;
+
+    if (!img) {
+        return res.sendStatus(204);
     }
 
-    const { buffer } = req.file
-    connection.query("INSERT INTO unrecognized_images (email_address, category, image, date_registered) VALUES (?, ?, ?, ?) ", [req.session.user.email_address, category, buffer, registered_date], (err) => {
-        if(err) return res.send(err)
-        return res.status(200).send('image successfully inserted')
-    })
-    
-}
+    const { buffer } = img;
+
+    try {
+        await promisePool.query("INSERT INTO unrecognized_images (email_address, category, image, date_registered) VALUES (?, ?, ?, ?)", 
+            [req.session.user.email_address, category, buffer, registered_date]);
+        
+        return res.status(200).send('Image successfully inserted');
+    } catch (err) {
+        return res.status(500).send(err);
+    }
+};
 
 const resetPass = async (req, res) => {
-    const {new_pass, email_address} = req.body
-    const hashedPass = await bcrypt.hash(new_pass, 12)
-    connection.query("UPDATE users SET user_password = ? WHERE email_address = ?", [hashedPass, email_address], (err) => {
-        if(err) return res.status(403).send(err)
-        return res.sendStatus(200)
-    })
-}
+    const { new_pass, email_address } = req.body;
+
+    try {
+        const hashedPass = await bcrypt.hash(new_pass, 12);
+        await promisePool.query("UPDATE users SET user_password = ? WHERE email_address = ?", [hashedPass, email_address]);
+
+        return res.sendStatus(200);
+    } catch (err) {
+        return res.status(403).send(err);
+    }
+};
 
 export default {display, insert, login, verification, verifyEmail, logout, profile, updateProfile, changePassword, registerWaste, firstTime, autoLogin, resetPass}

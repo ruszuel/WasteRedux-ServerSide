@@ -4,20 +4,14 @@ import userRoutes from './routes/userRoutes.js'
 import session from 'express-session'
 import dotenv from 'dotenv'
 import MySQLStore from 'express-mysql-session';
-import mysql from 'mysql2/promise'
+import mysql from 'mysql2'
+import database_config from './model/database_config.js';
 
 dotenv.config()
 const app = express();
 const port = 3000;
 
-const options = {
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME
-};
-
-const connection = mysql.createConnection(options);
+const connection = mysql.createPool(database_config.options);
 const sessionStore = new (MySQLStore(session))({ 
   clearExpired: true, 
   checkExpirationInterval: 900000

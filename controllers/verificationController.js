@@ -1,8 +1,9 @@
 import nodemailer from 'nodemailer'
 import dotenv from 'dotenv'
 import jwt from 'jsonwebtoken'
-import connection from '../model/database_config.js';
+import database_config from '../model/database_config.js';
 
+const promisePool = database_config.promisePool
 dotenv.config()
 
 const email = process.env.EMAIL;
@@ -26,105 +27,86 @@ const getCurDate = () => {
 }
 
 const otpVerification = async (req, res) => {
-    const { email_address } = req.body
+    const { email_address } = req.body;
     const OTP = Math.floor(1000 + Math.random() * 9000).toString();
-    const expiration = 3 * 60 * 1000
+    const expiration = 3 * 60 * 1000;
     const currentTime = new Date();
     const expirationDate = new Date(currentTime.getTime() + expiration);
     const expirationTime = expirationDate.toTimeString().slice(0, 8);
-    const expirationDay = getCurDate()
-   
-    connection.query("SELECT * FROM users WHERE email_address = ?", [email_address], (err, data) => {
-        if(err) return res.status(401).send(err)
-        
-        if(data.length === 0) {
-            return res.status(403).send("No such email exist") 
+    const expirationDay = getCurDate();
+
+    try {
+        // Check if the user exists
+        const [userData] = await promisePool.query("SELECT * FROM users WHERE email_address = ?", [email_address]);
+        if (userData.length === 0) {
+            return res.status(403).send("No such email exists");
         }
 
-        connection.query("SELECT * FROM otp WHERE email_address=?", [email_address], (err, data) => {
-            let temp, count;
-            if(err) return res.status(401).send(err)
-
-            if(data.length > 0){
-                temp = data.map((val) => parseInt(val.attemps))
-            }
-
-            if(isNaN(temp)){
-                count = 1 
-                console.log(count)
-            }else{
-                count = parseInt(temp) + 1 
-                console.log(temp)
-            }
-
-            if(parseInt(temp) >= 3) return res.sendStatus(429)
-
-            const mailOptions = {
-                from: process.env.EMAIL,
-                to: email_address,
-                subject: 'OTP Verification Code',
-                text: `Your OTP verification code is ${OTP}`,
-            }
-        
-            transporter.sendMail(mailOptions, (err) => {
-                if(err) {
-                    return res.status(500).send("Error sending mail: " + err.toString())
-                }
-
-                if(data.length > 0) {
-                    connection.query("UPDATE otp SET otp_code=?, expiry=?, expiry_date = ?, attemps=? WHERE email_address=?", [OTP, expirationTime, expirationDay, count, email_address], (err) => {
-                        if(err) return res.status(401).send(err)
-                    })
-                    return res.sendStatus(200)
-                }
-
-                connection.query("INSERT INTO otp VALUES (?, ?, ?, ?, ?)", [email_address, OTP, expirationTime, expirationDay, count], (err, info) => {
-                    if (err) return res.status(500).send(err)
-                    res.status(200).send('OTP Verification sent');
-                }) 
-            })
-
-        })
-
-    })
-} 
-
-const verifyOTP = (req, res) => {
-    const { email_address, otp } = req.body
-    connection.query("SELECT * from otp WHERE email_address = ?", [email_address], (err, result) => {
-        if(err) return res.status(403).send(err)
-        
-        if(result.length === 0){
-            return res.status(403).send("No data found")
+        // Check OTP attempts
+        const [otpData] = await promisePool.query("SELECT * FROM otp WHERE email_address = ?", [email_address]);
+        let count = 1; // Default attempt count
+        if (otpData.length > 0) {
+            count = parseInt(otpData[0].attemps) + 1;
+            if (count > 3) return res.sendStatus(429); // Rate limit exceeded
         }
 
-        const otp_code = result.map((val) => val.otp_code)
-        const expiry = result.map((val) => val.expiry)
-        const expiry_day = result.map((val) => {
-            const curDate = new Date(val.expiry_date);
-            const year = curDate.getFullYear();
-            const month = String(curDate.getMonth() + 1).padStart(2, '0');
-            const day = String(curDate.getDate()).padStart(2, '0');
-            const formattedDate = `${year}-${month}-${day}`;
-            return formattedDate
-        })
+        // Send OTP email
+        const mailOptions = {
+            from: process.env.EMAIL,
+            to: email_address,
+            subject: 'OTP Verification Code',
+            text: `Your OTP verification code is ${OTP}`,
+        };
 
-        const time = new Date()
-        const getTime = new Date(time.getTime())
-        const cTime = getTime.toTimeString().slice(0, 8)
-        const currentDate = getCurDate()
-        
-        if(otp === otp_code.toString() && currentDate === expiry_day.toString() &&cTime <= expiry.toString()){
-            console.log(currentDate)
-            return res.status(200).send("Successful")
+        await transporter.sendMail(mailOptions);
+
+        // Update or insert OTP data
+        if (otpData.length > 0) {
+            await promisePool.query(
+                "UPDATE otp SET otp_code = ?, expiry = ?, expiry_date = ?, attemps = ? WHERE email_address = ?",
+                [OTP, expirationTime, expirationDay, count, email_address]
+            );
+        } else {
+            await promisePool.query(
+                "INSERT INTO otp (email_address, otp_code, expiry, expiry_date, attemps) VALUES (?, ?, ?, ?, ?)",
+                [email_address, OTP, expirationTime, expirationDay, count]
+            );
         }
-        
-        console.log(expiry_day);
-        
-        return res.status(500).send("Invalid OTP code")
-    })
-}
 
+        return res.status(200).send('OTP Verification sent');
+    } catch (err) {
+        return res.status(500).send(err.message);
+    }
+};
 
+const verifyOTP = async (req, res) => {
+    const { email_address, otp } = req.body;
+
+    try {
+        const [result] = await pool.promise().query("SELECT * FROM otp WHERE email_address = ?", [email_address]);
+
+        if (result.length === 0) {
+            return res.status(403).send("No data found");
+        }
+
+        const otp_code = result[0].otp_code;
+        const expiry = result[0].expiry;
+        const expiry_day = result[0].expiry_date;
+
+        const currentTime = new Date();
+        const currentDate = getCurDate();
+        const formattedCurrentTime = currentTime.toTimeString().slice(0, 8);
+        const formattedExpiryDay = new Date(expiry_day).toISOString().slice(0, 10); // Format to YYYY-MM-DD
+
+        // Check OTP validity
+        if (otp === otp_code && currentDate === formattedExpiryDay && formattedCurrentTime <= expiry) {
+            return res.status(200).send("Successful");
+        }
+
+        return res.status(500).send("Invalid OTP code");
+    } catch (err) {
+        return res.status(403).send(err);
+    }
+};
 
 export default {otpVerification, verifyOTP}
