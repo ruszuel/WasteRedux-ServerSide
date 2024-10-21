@@ -83,7 +83,7 @@ const verifyOTP = async (req, res) => {
     const { email_address, otp } = req.body;
 
     try {
-        const [result] = await pool.promise().query("SELECT * FROM otp WHERE email_address = ?", [email_address]);
+        const [result] = await promisePool.query("SELECT * FROM otp WHERE email_address = ?", [email_address]);
 
         if (result.length === 0) {
             return res.status(403).send("No data found");
@@ -95,9 +95,16 @@ const verifyOTP = async (req, res) => {
 
         const currentTime = new Date();
         const currentDate = getCurDate();
-        const formattedCurrentTime = currentTime.toTimeString().slice(0, 8);
-        const formattedExpiryDay = new Date(expiry_day).toISOString().slice(0, 10); // Format to YYYY-MM-DD
 
+        const formattedCurrentTime = currentTime.toTimeString().slice(0, 8);
+        
+        const curDate = new Date(expiry_day);
+        const year = curDate.getFullYear();
+        const month = String(curDate.getMonth() + 1).padStart(2, '0');
+        const day = String(curDate.getDate()).padStart(2, '0');
+        const formattedExpiryDay = `${year}-${month}-${day}`;
+
+        console.log(formattedExpiryDay, currentDate)
         // Check OTP validity
         if (otp === otp_code && currentDate === formattedExpiryDay && formattedCurrentTime <= expiry) {
             return res.status(200).send("Successful");

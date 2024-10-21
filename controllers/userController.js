@@ -18,10 +18,8 @@ const display = async (req, res) => {
 
 const insert = async (req, res) => {
     const receivedData = req.body
-    console.log(receivedData)
     try{
         const hashedPass = await bcrypt.hash(receivedData.user_password.trim(), 12)
-        console.log(hashedPass)
         await promisePool.query('INSERT INTO users (first_name, last_name, email_address, college_department, user_password, isVerified, isFirstTime) VALUES (?, ?, ?, ?, ?, ?, ?)', [receivedData.first_name, receivedData.last_name, receivedData.email_address, receivedData.college_department, hashedPass, false, true])
         res.status(200).send('inserted successfully') 
     }catch(err){
@@ -35,7 +33,6 @@ const login = async (req, res) => {
     try{
         const [result] = await promisePool.query('SELECT * from users WHERE email_address = ?', [email_address])
 
-        console.log(email_address)
         if(result.length === 0){
             res.status(401).send('Invalid Credential')
             return 
@@ -48,7 +45,6 @@ const login = async (req, res) => {
         }
 
         const isValid = await bcrypt.compare(user_password.trim(), result[0].user_password)
-        console.log(result[0].user_password, user_password)
         if(!isValid){
             res.status(401).send('Wrong password')
             return
@@ -61,11 +57,11 @@ const login = async (req, res) => {
         }else{
             req.session.regenerate((err) => {
                 if (err) return res.status(500).send("Failed regenerating session")
-                req.session.user = result[0]
                 if(rememberme){     
                     req.session.cookie.maxAge = 7 * 24 * 60 * 60 * 1000
                     return res.status(200).json({sessionId: req.session.id})
                 }
+                req.session.user = result[0]
                 return res.sendStatus(200)
             })
         } 
@@ -87,11 +83,7 @@ const firstTime = async (req, res) => {
        req.session.regenerate((err) => {
         if (err) return res.status(500).send("Failed regenerating session")
         req.session.user = result[0]
-        if(rememberme){     
-            req.session.cookie.maxAge = 7 * 24 * 60 * 60 * 1000
-            return res.status(200).json({sessionId: req.session.id})
-        }
-        return res.sendStatus(200)
+        return res.status(200).json({sessionId: req.session.id})
     })
     } catch (err) {
         if (err.code === 'ER_NO_REFERENCED_ROW_2') {
@@ -104,13 +96,15 @@ const firstTime = async (req, res) => {
 const autoLogin = async (req, res) => {
     const { auto_id } = req.body;
 
+    if (!auto_id) {
+        return res.status(400).send("Missing auto_id");
+    }
+
     try {
         const [result] = await promisePool.query("SELECT * FROM sessions WHERE session_id = ?", [auto_id]);
-
         if (result.length === 0) {
             return res.status(201).send("Session expired");
         }
-
         return res.sendStatus(200);
     } catch (err) {
         return res.status(500).send(err);
@@ -177,8 +171,6 @@ const logout = (req, res) => {
 
     req.session.destroy((err) => {
         if (err) return res.sendStatus(403)
-        
-        console.log(req.session)
         res.sendStatus(200) 
     })
 }

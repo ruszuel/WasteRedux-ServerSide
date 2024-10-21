@@ -14,7 +14,7 @@ const port = 3000;
 const connection = mysql.createPool(database_config.options);
 const sessionStore = new (MySQLStore(session))({ 
   clearExpired: true, 
-  checkExpirationInterval: 900000
+  checkExpirationInterval: 60000 * 5
 }, connection)
 
 const corsOptions = {
@@ -29,7 +29,9 @@ app.use(session({
   saveUninitialized: false,
   resave: false,
   cookie: {
-    maxAge: 86400 * 1000
+    maxAge: 14400000,
+    // secure: true,
+    // httpOnly: true
   },
   store: sessionStore
 }))
