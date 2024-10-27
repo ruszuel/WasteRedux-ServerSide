@@ -18,7 +18,7 @@ const sessionStore = new (MySQLStore(session))({
 }, connection)
 
 const corsOptions = {
-  origin: 'http://localhost:3000',
+  origin: true,
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   credentials: true,
   optionsSuccessStatus: 200
@@ -29,9 +29,9 @@ app.use(session({
   saveUninitialized: false,
   resave: false,
   cookie: {
-    maxAge: 14400000,
-    // secure: true,
-    // httpOnly: true
+    maxAge: 14400000, //4hrs
+    secure: true,
+    httpOnly: true
   },
   store: sessionStore
 }))

@@ -20,7 +20,7 @@ const insert = async (req, res) => {
     const receivedData = req.body
     try{
         const hashedPass = await bcrypt.hash(receivedData.user_password.trim(), 12)
-        await promisePool.query('INSERT INTO users (first_name, last_name, email_address, college_department, user_password, isVerified, isFirstTime) VALUES (?, ?, ?, ?, ?, ?, ?)', [receivedData.first_name, receivedData.last_name, receivedData.email_address, receivedData.college_department, hashedPass, false, true])
+        await promisePool.query('INSERT INTO users (first_name, last_name, email_address, college_department, user_password, isVerified, isFirstTime, isSuspended) VALUES (?, ?, ?, ?, ?, ?, ?)', [receivedData.first_name, receivedData.last_name, receivedData.email_address, receivedData.college_department, hashedPass, false, true, false])
         res.status(200).send('inserted successfully') 
     }catch(err){
         console.error('Error inserting data:', err);
@@ -59,7 +59,8 @@ const login = async (req, res) => {
                 if (err) return res.status(500).send("Failed regenerating session")
                 if(rememberme){     
                     req.session.cookie.maxAge = 7 * 24 * 60 * 60 * 1000
-                    return res.status(200).json({sessionId: req.session.id})
+                    req.session.user = result[0]
+                    return res.status(200).json({sessionId: req.session.id}) 
                 }
                 req.session.user = result[0]
                 return res.sendStatus(200)
@@ -105,6 +106,8 @@ const autoLogin = async (req, res) => {
         if (result.length === 0) {
             return res.status(201).send("Session expired");
         }
+        const session_data = JSON.parse(result[0].data)
+        req.session.autolog = session_data.user
         return res.sendStatus(200);
     } catch (err) {
         return res.status(500).send(err);
@@ -126,13 +129,21 @@ const verification = (req, res) => {
     const {email_address} = req.body
     const email = {email: email_address}
     const accessToken = jwt.sign(email, process.env.SECRET_ACCESS_TOKEN, {expiresIn: '5m'})
-    const verifLink = `http://localhost:3000/user/verify/${accessToken}`
+    const verifLink = `https://wasteredux.onrender.com/user/verify/${accessToken}`
 
     const mailOptions = {
         from: email,
         to: email_address,
         subject: 'Verify Your Email',
-        text: `Click the link to verify your email: ${verifLink}`  
+        html: `<div style="font-family: Poppins, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+        <h2 style="color: #41644A;">Dear User,</h2>
+        <p style="color: black;">Thank you for registering with us!</p>
+        <p style="color: black;">To complete your registration, please verify your email address by clicking the link below:</p>
+        <a href=${verifLink} style="display: flex; padding: 10px 10px; background-color: #81A969; color: white; text-decoration: none; border-radius: 5px;">Verify My Email</a>
+        <p style="color: black;">This link will expire in 5 minutes. If you did not create an account with us, please disregard this email.</p>
+        <p style="color: black;">If you have any questions, feel free to contact our support team.</p>
+        <p style="margin-top: 30px;color: black;">Best regards,<br>WasteRedux<br>wasteredux@gmail.com</p>
+        </div>`  
     }
 
     transporter.sendMail(mailOptions, (err) => {
@@ -176,9 +187,16 @@ const logout = (req, res) => {
 }
 
 const profile = async (req, res) => {
-    if (!req.session.user) return res.sendStatus(401);
+    if (!req.session.user && !req.session.autolog) return res.sendStatus(401);
 
-    const mail = req.session.user.email_address;
+    let mail
+    if(req.session.user){
+        mail = req.session.user.email_address;
+    }
+    
+    if(req.session.autolog){
+        mail = req.session.autolog.email_address;
+    } 
 
     try {
         const [data] = await promisePool.query("SELECT * FROM users WHERE email_address = ?", [mail]);
@@ -260,6 +278,11 @@ const registerWaste = async (req, res) => {
     const { buffer } = img;
 
     try {
+        const [result] = await promisePool.query("SELECT isSuspended FROM users WHERE email_address=?", req.session.user.email_address)
+        if(result[0].isSuspended === 1){
+            return res.sendStatus(403)
+        }
+
         await promisePool.query("INSERT INTO unrecognized_images (email_address, category, image, date_registered) VALUES (?, ?, ?, ?)", 
             [req.session.user.email_address, category, buffer, registered_date]);
         

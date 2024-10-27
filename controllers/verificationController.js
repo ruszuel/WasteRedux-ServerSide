@@ -36,31 +36,37 @@ const otpVerification = async (req, res) => {
     const expirationDay = getCurDate();
 
     try {
-        // Check if the user exists
         const [userData] = await promisePool.query("SELECT * FROM users WHERE email_address = ?", [email_address]);
         if (userData.length === 0) {
             return res.status(403).send("No such email exists");
         }
 
-        // Check OTP attempts
         const [otpData] = await promisePool.query("SELECT * FROM otp WHERE email_address = ?", [email_address]);
-        let count = 1; // Default attempt count
+        let count = 1; 
         if (otpData.length > 0) {
             count = parseInt(otpData[0].attemps) + 1;
-            if (count > 3) return res.sendStatus(429); // Rate limit exceeded
+            if (count > 3) return res.sendStatus(429); 
         }
 
-        // Send OTP email
         const mailOptions = {
             from: process.env.EMAIL,
             to: email_address,
             subject: 'OTP Verification Code',
-            text: `Your OTP verification code is ${OTP}`,
+            html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9;">
+                <h2 style="color: #333; text-align: center;">OTP Verification</h2>
+                <p style="font-size: 18px; color: #555;">Dear User,</p>
+                <p style="font-size: 18px; color: #555;">Thank you for your request. Your OTP (One-Time Password) verification code is:</p>
+                <p style="font-size: 24px; text-align: center; color: #81A969;"><b>${OTP}</b></p>
+                <p style="font-size: 18px; color: #555;">This code is valid for <strong>3 minutes</strong>. Please enter this code on the verification page to complete the process.</p>
+                <p style="font-size: 18px; color: #555;">If you did not request this OTP, please disregard this email.</p>
+                <p style="font-size: 18px; color: #555;">If you have any questions, feel free to contact our support team.</p>
+                <p style="font-size: 18px; color: #555;">Best regards,<br>WasteRedux</p>
+            </div> `,
         };
 
         await transporter.sendMail(mailOptions);
 
-        // Update or insert OTP data
         if (otpData.length > 0) {
             await promisePool.query(
                 "UPDATE otp SET otp_code = ?, expiry = ?, expiry_date = ?, attemps = ? WHERE email_address = ?",
@@ -105,7 +111,7 @@ const verifyOTP = async (req, res) => {
         const formattedExpiryDay = `${year}-${month}-${day}`;
 
         console.log(formattedExpiryDay, currentDate)
-        // Check OTP validity
+        
         if (otp === otp_code && currentDate === formattedExpiryDay && formattedCurrentTime <= expiry) {
             return res.status(200).send("Successful");
         }
