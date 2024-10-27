@@ -20,7 +20,7 @@ const insert = async (req, res) => {
     const receivedData = req.body
     try{
         const hashedPass = await bcrypt.hash(receivedData.user_password.trim(), 12)
-        await promisePool.query('INSERT INTO users (first_name, last_name, email_address, college_department, user_password, isVerified, isFirstTime, isSuspended) VALUES (?, ?, ?, ?, ?, ?, ?)', [receivedData.first_name, receivedData.last_name, receivedData.email_address, receivedData.college_department, hashedPass, false, true, false])
+        await promisePool.query('INSERT INTO users (first_name, last_name, email_address, college_department, user_password, isVerified, isFirstTime, isSuspended) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [receivedData.first_name, receivedData.last_name, receivedData.email_address, receivedData.college_department, hashedPass, false, true, false])
         res.status(200).send('inserted successfully') 
     }catch(err){
         console.error('Error inserting data:', err);
