@@ -129,7 +129,7 @@ const verification = (req, res) => {
     const {email_address} = req.body
     const email = {email: email_address}
     const accessToken = jwt.sign(email, process.env.SECRET_ACCESS_TOKEN, {expiresIn: '5m'})
-    const verifLink = `https://wasteredux.onrender.com/user/verify/${accessToken}`
+    const verifLink = `https://waste-redux-server-side.vercel.app/user/verify/${accessToken}`
 
     const mailOptions = {
         from: email,
