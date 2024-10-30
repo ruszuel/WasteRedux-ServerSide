@@ -11,7 +11,9 @@ const display = async (req, res) => {
         const [result] = await promisePool.query('SELECT * from users')  
         res.json(result)
     }catch(err){
-        console.error('Error inserting data:', err);
+        if(err.code === 'ECCONRESET'){
+            return res.status(500).json({ message: 'Database connection error. Please try again.' });
+        }
         res.status(500).send('Internal Server Error');
     }
 }
@@ -23,7 +25,10 @@ const insert = async (req, res) => {
         await promisePool.query('INSERT INTO users (first_name, last_name, email_address, college_department, user_password, isVerified, isFirstTime, isSuspended) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [receivedData.first_name, receivedData.last_name, receivedData.email_address, receivedData.college_department, hashedPass, false, true, false])
         res.status(200).send('inserted successfully') 
     }catch(err){
-        console.error('Error inserting data:', err);
+        if(err.code === 'ECCONRESET'){
+            return res.status(500).json({ message: 'Database connection error. Please try again.' });
+        }
+
         res.status(500).send('Internal Server Error');
     }
 }
@@ -67,6 +72,9 @@ const login = async (req, res) => {
             })
         } 
     }catch(err){
+        if(err.code === 'ECCONRESET'){
+            return res.status(500).json({ message: 'Database connection error. Please try again.' });
+        }
         if (err) throw err;
     }
  
@@ -89,6 +97,8 @@ const firstTime = async (req, res) => {
     } catch (err) {
         if (err.code === 'ER_NO_REFERENCED_ROW_2') {
             return res.status(404).send('User not found');
+        }else if(err.code === 'ECCONRESET'){
+            return res.status(500).json({ message: 'Database connection error. Please try again.' });
         }
         return res.status(500).send(err);
     } 
@@ -110,6 +120,9 @@ const autoLogin = async (req, res) => {
         req.session.autolog = session_data.user
         return res.sendStatus(200);
     } catch (err) {
+        if(err.code === 'ECCONRESET'){
+            return res.status(500).json({ message: 'Database connection error. Please try again.' });
+        }   
         return res.status(500).send(err);
     }
 };
@@ -179,6 +192,10 @@ const verifyEmail = async (req, res) => {
 
 const logout = (req, res) => {
     if(!req.session.user) return res.sendStatus(401)
+    
+    if(err.code === 'ECCONRESET'){
+        return res.status(500).json({ message: 'Database connection error. Please try again.' });
+    }
 
     req.session.destroy((err) => {
         if (err) return res.sendStatus(403)
@@ -208,6 +225,9 @@ const profile = async (req, res) => {
 
         return res.status(200).send(modified);
     } catch (err) {
+        if(err.code === 'ECCONRESET'){
+            return res.status(500).json({ message: 'Database connection error. Please try again.' });
+        }
         return res.status(400).send(err);
     }
 };
@@ -233,6 +253,9 @@ const updateProfile = async (req, res) => {
         const [result] = await promisePool.query(updateQuery, queryParams);
         return res.status(200).send(result);
     } catch (err) {
+        if(err.code === 'ECCONRESET'){
+            return res.status(500).json({ message: 'Database connection error. Please try again.' });
+        }
         return res.status(403).json(err);
     }
 };
@@ -255,6 +278,9 @@ const changePassword = async (req, res) => {
 
         return res.sendStatus(200);
     } catch (err) {
+        if(err.code === 'ECCONRESET'){
+            return res.status(500).json({ message: 'Database connection error. Please try again.' });
+        }
         return res.status(403).send(err);
     }
 };
@@ -288,6 +314,9 @@ const registerWaste = async (req, res) => {
         
         return res.status(200).send('Image successfully inserted');
     } catch (err) {
+        if(err.code === 'ECCONRESET'){
+            return res.status(500).json({ message: 'Database connection error. Please try again.' });
+        }
         return res.status(500).send(err);
     }
 };
@@ -301,6 +330,9 @@ const resetPass = async (req, res) => {
 
         return res.sendStatus(200);
     } catch (err) {
+        if(err.code === 'ECCONRESET'){
+            return res.status(500).json({ message: 'Database connection error. Please try again.' });
+        }
         return res.status(403).send(err);
     }
 };

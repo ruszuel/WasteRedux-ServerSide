@@ -13,6 +13,7 @@ const options = {
   idleTimeout: 60000,
   queueLimit: 50,
   enableKeepAlive: true,
+  connectTimeout: 60000,
   keepAliveInitialDelay: 5000
 }
 const pool = mysql.createPool(options)
