@@ -191,16 +191,18 @@ const verifyEmail = async (req, res) => {
 };
 
 const logout = (req, res) => {
-    if(!req.session.user) return res.sendStatus(401)
+    try{
+        if(!req.session.user) return res.sendStatus(401)
     
-    if(err.code === 'ECCONRESET'){
-        return res.status(500).json({ message: 'Database connection error. Please try again.' });
+            req.session.destroy((err) => {
+                if (err) return res.sendStatus(403)
+                res.sendStatus(200) 
+            })
+    } catch(err){
+        if(err.code === 'ECCONRESET'){
+            return res.status(500).json({ message: 'Database connection error. Please try again.' });
+        }
     }
-
-    req.session.destroy((err) => {
-        if (err) return res.sendStatus(403)
-        res.sendStatus(200) 
-    })
 }
 
 const profile = async (req, res) => {
