@@ -11,9 +11,6 @@ const display = async (req, res) => {
         const [result] = await promisePool.query('SELECT * from users')  
         res.json(result)
     }catch(err){
-        if(err.code === 'ECCONRESET'){
-            return res.status(500).json({ message: 'Database connection error. Please try again.' });
-        }
         res.status(500).send('Internal Server Error');
     }
 }
@@ -25,10 +22,6 @@ const insert = async (req, res) => {
         await promisePool.query('INSERT INTO users (first_name, last_name, email_address, college_department, user_password, isVerified, isFirstTime, isSuspended) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [receivedData.first_name, receivedData.last_name, receivedData.email_address, receivedData.college_department, hashedPass, false, true, false])
         res.status(200).send('inserted successfully') 
     }catch(err){
-        if(err.code === 'ECCONRESET'){
-            return res.status(500).json({ message: 'Database connection error. Please try again.' });
-        }
-
         res.status(500).send('Internal Server Error');
     }
 }
@@ -72,10 +65,7 @@ const login = async (req, res) => {
             })
         } 
     }catch(err){
-        if(err.code === 'ECCONRESET'){
-            return res.status(500).json({ message: 'Database connection error. Please try again.' });
-        }
-        if (err) throw err;
+        return res.status(500).json({ message: 'Database connection error. Please try again.' });
     }
  
 }
@@ -97,8 +87,6 @@ const firstTime = async (req, res) => {
     } catch (err) {
         if (err.code === 'ER_NO_REFERENCED_ROW_2') {
             return res.status(404).send('User not found');
-        }else if(err.code === 'ECCONRESET'){
-            return res.status(500).json({ message: 'Database connection error. Please try again.' });
         }
         return res.status(500).send(err);
     } 
@@ -152,7 +140,7 @@ const verification = (req, res) => {
         <h2 style="color: #41644A;">Dear User,</h2>
         <p style="color: black;">Thank you for registering with us!</p>
         <p style="color: black;">To complete your registration, please verify your email address by clicking the link below:</p>
-        <a href=${verifLink} style="display: flex; padding: 10px 10px; background-color: #81A969; color: white; text-decoration: none; border-radius: 5px;">Verify My Email</a>
+        <a href=${verifLink} style="display: flex; padding: 10px 10px; background-color: #81A969; color: white; text-decoration: none; border-radius: 5px; text-align: center;">Verify My Email</a>
         <p style="color: black;">This link will expire in 5 minutes. If you did not create an account with us, please disregard this email.</p>
         <p style="color: black;">If you have any questions, feel free to contact our support team.</p>
         <p style="margin-top: 30px;color: black;">Best regards,<br>WasteRedux<br>wasteredux@gmail.com</p>
@@ -183,7 +171,16 @@ const verifyEmail = async (req, res) => {
         });
 
         await promisePool.query('UPDATE users SET isVerified = ? WHERE email_address = ?', [true, data.email]);
-        return res.sendStatus(200);
+        return res.status(200).send(`
+            <html>
+                <body style="font-family: 'Poppins', sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #f4f4f4;">
+                    <div style="text-align: center; background-color: #ffffff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
+                    <h1 style="color: #81A969; font-weight: 600;">Verification Successful!</h1>
+                    <p style="font-size: 16px; color: #333; font-weight: 400;">Your email has been successfully verified.</p>
+                    <p style="font-size: 16px; color: #333; font-weight: 400;">You can now leave this page and proceed to log in.</p>
+                    </div>
+                </body>
+            </html>`);
     } catch (err) {
         console.error(err);
         return res.sendStatus(401);
@@ -199,9 +196,7 @@ const logout = (req, res) => {
                 res.sendStatus(200) 
             })
     } catch(err){
-        if(err.code === 'ECCONRESET'){
-            return res.status(500).json({ message: 'Database connection error. Please try again.' });
-        }
+        return res.status(500).json({ message: 'Database connection error. Please try again.' });
     }
 }
 
@@ -227,10 +222,7 @@ const profile = async (req, res) => {
 
         return res.status(200).send(modified);
     } catch (err) {
-        if(err.code === 'ECCONRESET'){
-            return res.status(500).json({ message: 'Database connection error. Please try again.' });
-        }
-        return res.status(400).send(err);
+        return res.status(500).send(err);
     }
 };
 
@@ -255,10 +247,8 @@ const updateProfile = async (req, res) => {
         const [result] = await promisePool.query(updateQuery, queryParams);
         return res.status(200).send(result);
     } catch (err) {
-        if(err.code === 'ECCONRESET'){
-            return res.status(500).json({ message: 'Database connection error. Please try again.' });
-        }
-        return res.status(403).json(err);
+        
+        return res.status(500).json(err);
     }
 };
 
@@ -280,10 +270,7 @@ const changePassword = async (req, res) => {
 
         return res.sendStatus(200);
     } catch (err) {
-        if(err.code === 'ECCONRESET'){
-            return res.status(500).json({ message: 'Database connection error. Please try again.' });
-        }
-        return res.status(403).send(err);
+        return res.status(500).send(err);
     }
 };
 
@@ -316,9 +303,6 @@ const registerWaste = async (req, res) => {
         
         return res.status(200).send('Image successfully inserted');
     } catch (err) {
-        if(err.code === 'ECCONRESET'){
-            return res.status(500).json({ message: 'Database connection error. Please try again.' });
-        }
         return res.status(500).send(err);
     }
 };
@@ -332,10 +316,7 @@ const resetPass = async (req, res) => {
 
         return res.sendStatus(200);
     } catch (err) {
-        if(err.code === 'ECCONRESET'){
-            return res.status(500).json({ message: 'Database connection error. Please try again.' });
-        }
-        return res.status(403).send(err);
+        return res.status(500).send(err);
     }
 };
 
