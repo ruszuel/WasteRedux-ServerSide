@@ -1,11 +1,13 @@
 import express from 'express';
 import cors from 'cors';
 import userRoutes from './routes/userRoutes.js'
+import loadModel from './controllers/modelController.js';
 import session from 'express-session'
 import dotenv from 'dotenv'
 import MySQLStore from 'express-mysql-session';
 import mysql from 'mysql2'
 import database_config from './model/database_config.js';
+import helmet from 'helmet'
 
 dotenv.config()
 const app = express();
@@ -25,23 +27,26 @@ const corsOptions = {
 };
 
 app.use(session({
+  name: 'waste',
   secret: process.env.SECRET_SESSION_TOKEN,
   saveUninitialized: false,
   resave: false,
   cookie: {
     maxAge: 14400000, //4hrs
-    // secure: false,
+    secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: 'None'
   },
   store: sessionStore
 }))
 
-app.use(cors(corsOptions));
+app.use(cors());
 app.use(express.json());
+app.use(helmet())
 app.use('/user', userRoutes);
 
-app.listen(port, () => {
+app.listen(port, async () => {
+  await loadModel.loadModel()
   console.log(`listening to port ${port}`)
 })
 

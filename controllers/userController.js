@@ -3,9 +3,11 @@ import bcrypt from 'bcrypt';
 import nodemailer from 'nodemailer'
 import dotenv from 'dotenv'
 import jwt from 'jsonwebtoken'
+import { Redis } from 'ioredis'
 
 const promisePool = database_config.promisePool
 dotenv.config();
+const redis = new Redis(process.env.REDIS_URL)
 const display = async (req, res) => {
     try{
         const [result] = await promisePool.query('SELECT * from users')  
@@ -61,6 +63,7 @@ const login = async (req, res) => {
                     return res.status(200).json({sessionId: req.session.id}) 
                 }
                 req.session.user = result[0]
+                redis.set('user', JSON.stringify(result[0]), 'EX', 10)
                 return res.sendStatus(200)
             })
         } 
@@ -320,4 +323,67 @@ const resetPass = async (req, res) => {
     }
 };
 
-export default {display, insert, login, verification, verifyEmail, logout, profile, updateProfile, changePassword, registerWaste, firstTime, autoLogin, resetPass}
+const history = async (req, res) => {
+    if(!req.session.user) return res.sendStatus(401)
+    
+    try {
+        const [data] = await promisePool.query("SELECT category, scan_date, waste_type FROM scan_history WHERE email_address=? ORDER BY id DESC", [req.session.user.email_address])
+        
+        if(!data|| data.length === 0){
+            console.log('no history')
+            return res.status(200).send([])
+        }
+
+        const curDate = new Date(data[0].scan_date);
+        const year = curDate.getFullYear();
+        const month = String(curDate.getMonth() + 1).padStart(2, '0');
+        const day = String(curDate.getDate()).padStart(2, '0');
+        const formattedDate = `${year}-${month}-${day}`;
+            
+        console.log(formattedDate)
+        const mod = data.map(user => ({
+            ...user, 
+            scan_date: formattedDate
+        }))
+        return res.status(200).send(mod)
+    
+       
+    } catch (error) {
+        console.log(error)
+        return res.status(500).send(error)
+    }
+}
+
+const home = async (req, res) => {
+    if(!req.session.user) return res.sendStatus(401)
+    
+    try {
+        const [data] = await promisePool.query("SELECT category, scan_date, waste_type FROM scan_history WHERE email_address=? ORDER BY id DESC LIMIT 3", [req.session.user.email_address])
+           
+            if(!data|| data.length === 0){
+                console.log('no history')
+                return res.status(200).send([])
+            }
+
+            const curDate = new Date(data[0].scan_date);
+            const year = curDate.getFullYear();
+            const month = String(curDate.getMonth() + 1).padStart(2, '0');
+            const day = String(curDate.getDate()).padStart(2, '0');
+            const formattedDate = `${year}-${month}-${day}`;
+                
+            console.log(formattedDate)
+            const mod = data.map(user => ({
+                ...user, 
+                scan_date: formattedDate
+            }))
+            return res.status(200).send(mod)
+        
+       
+    } catch (error) {
+        console.log(error)
+        return res.status(400).send(err)
+    }
+    
+}
+
+export default {display, insert, login, verification, verifyEmail, logout, profile, updateProfile, changePassword, registerWaste, firstTime, autoLogin, resetPass, history, home}
