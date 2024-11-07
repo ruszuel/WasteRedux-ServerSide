@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import userRoutes from './routes/userRoutes.js'
-import loadModel from './controllers/modelController.js';
 import session from 'express-session'
 import dotenv from 'dotenv'
 import MySQLStore from 'express-mysql-session';
@@ -46,7 +45,6 @@ app.use(helmet())
 app.use('/user', userRoutes);
 
 app.listen(port, async () => {
-  await loadModel.loadModel()
   console.log(`listening to port ${port}`)
 })
 

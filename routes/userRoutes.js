@@ -1,5 +1,4 @@
 import express from 'express'
-import modelController from '../controllers/modelController.js'
 import userController from '../controllers/userController.js'
 import verificationController from '../controllers/verificationController.js'
 import multer from 'multer'
@@ -23,7 +22,6 @@ route.get('/first_time', userController.firstTime)
 route.get('/logout', userController.logout)
 route.post('/auto_login', userController.autoLogin)
 route.patch('/reset_pass', userController.resetPass)
-route.post('/predict', upload.single('image'), modelController.predict)
 route.get('/history', userController.history)
 route.get('/home', userController.home)
 
