@@ -44,7 +44,7 @@ app.use(express.json());
 app.use(helmet())
 app.use('/user', userRoutes);
 
-app.listen(port, async () => {
+app.listen(port, () => {
   console.log(`listening to port ${port}`)
 })
 
