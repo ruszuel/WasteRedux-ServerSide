@@ -133,7 +133,7 @@ const verification = (req, res) => {
     const {email_address} = req.body
     const email = {email: email_address}
     const accessToken = jwt.sign(email, process.env.SECRET_ACCESS_TOKEN, {expiresIn: '5m'})
-    const verifLink = `https://waste-redux-server-side.vercel.app/user/verify/${accessToken}`
+    const verifLink = `https://seal-app-uuotj.ondigitalocean.app/user/verify/${accessToken}`
 
     const mailOptions = {
         from: email,
@@ -192,7 +192,7 @@ const verifyEmail = async (req, res) => {
 
 const logout = (req, res) => {
     try{
-        if(!req.session.user) return res.sendStatus(401)
+        if(!req.session.user && !req.session.autolog) return res.sendStatus(401)
     
             req.session.destroy((err) => {
                 if (err) return res.sendStatus(403)
