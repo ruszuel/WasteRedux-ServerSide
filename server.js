@@ -7,6 +7,7 @@ import MySQLStore from 'express-mysql-session';
 import mysql from 'mysql2'
 import database_config from './model/database_config.js';
 import helmet from 'helmet'
+import loadModel from './controllers/modelController.js'
 
 dotenv.config()
 const app = express();
@@ -44,7 +45,8 @@ app.use(express.json());
 app.use(helmet())
 app.use('/user', userRoutes);
 
-app.listen(port, () => {
+app.listen(port, async () => {
+  await loadModel.loadModel()
   console.log(`listening to port ${port}`)
 })
 

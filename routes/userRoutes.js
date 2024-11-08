@@ -1,6 +1,7 @@
 import express from 'express'
 import userController from '../controllers/userController.js'
 import verificationController from '../controllers/verificationController.js'
+import modelController from '../controllers/modelController.js'
 import multer from 'multer'
 
 const storage = multer.memoryStorage()
@@ -24,5 +25,6 @@ route.post('/auto_login', userController.autoLogin)
 route.patch('/reset_pass', userController.resetPass)
 route.get('/history', userController.history)
 route.get('/home', userController.home)
+route.post('/predict', upload.single('image'), modelController.predict)
 
 export default route;
