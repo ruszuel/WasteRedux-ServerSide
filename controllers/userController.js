@@ -3,11 +3,11 @@ import bcrypt from 'bcrypt';
 import nodemailer from 'nodemailer'
 import dotenv from 'dotenv'
 import jwt from 'jsonwebtoken'
-import { Redis } from 'ioredis'
+// import { Redis } from 'ioredis'
 
 const promisePool = database_config.promisePool
 dotenv.config();
-const redis = new Redis(process.env.REDIS_URL)
+// const redis = new Redis(process.env.REDIS_URL)
 const display = async (req, res) => {
     try{
         const [result] = await promisePool.query('SELECT * from users')  
@@ -63,7 +63,7 @@ const login = async (req, res) => {
                     return res.status(200).json({sessionId: req.session.id}) 
                 }
                 req.session.user = result[0]
-                redis.set('user', JSON.stringify(result[0]), 'EX', 10)
+                // redis.set('user', JSON.stringify(result[0]), 'EX', 10)
                 return res.sendStatus(200)
             })
         } 
