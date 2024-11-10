@@ -14,7 +14,7 @@ const transporter = nodemailer.createTransport({
         user: email,
         pass: pass
     },
-    secure: false
+    secure: true
 })
 
 const getCurDate = () => {

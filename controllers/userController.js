@@ -126,24 +126,24 @@ const transporter = nodemailer.createTransport({
         user: email,
         pass: pass
     },
-    secure: false
+    secure: true
 })
 
 const verification = (req, res) => {
     const {email_address} = req.body
     const email = {email: email_address}
     const accessToken = jwt.sign(email, process.env.SECRET_ACCESS_TOKEN, {expiresIn: '5m'})
-    const verifLink = `https://seal-app-uuotj.ondigitalocean.app/user/verify/${accessToken}`
+    const verifLink = `https://waste-redux-server-side.vercel.app/user/verify/${accessToken}`
 
     const mailOptions = {
-        from: email,
+        from: process.env.EMAIL,
         to: email_address,
         subject: 'Verify Your Email',
         html: `<div style="font-family: Poppins, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
         <h2 style="color: #41644A;">Dear User,</h2>
         <p style="color: black;">Thank you for registering with us!</p>
         <p style="color: black;">To complete your registration, please verify your email address by clicking the link below:</p>
-        <a href=${verifLink} style="display: flex; padding: 10px 10px; background-color: #81A969; color: white; text-decoration: none; border-radius: 5px; text-align: center;">Verify My Email</a>
+        <a href="${verifLink}" style="padding: 10px 10px; background-color: #81A969; color: white; text-decoration: none; border-radius: 5px; text-align: center;">Verify My Email</a>
         <p style="color: black;">This link will expire in 5 minutes. If you did not create an account with us, please disregard this email.</p>
         <p style="color: black;">If you have any questions, feel free to contact our support team.</p>
         <p style="margin-top: 30px;color: black;">Best regards,<br>WasteRedux<br>wasteredux@gmail.com</p>
@@ -333,18 +333,19 @@ const history = async (req, res) => {
             console.log('no history')
             return res.status(200).send([])
         }
-
-        const curDate = new Date(data[0].scan_date);
-        const year = curDate.getFullYear();
-        const month = String(curDate.getMonth() + 1).padStart(2, '0');
-        const day = String(curDate.getDate()).padStart(2, '0');
-        const formattedDate = `${year}-${month}-${day}`;
             
-        console.log(formattedDate)
-        const mod = data.map(user => ({
-            ...user, 
-            scan_date: formattedDate
-        }))
+        const mod = data.map(user => {
+            const curDate = new Date(user.scan_date);
+            const year = curDate.getFullYear();
+            const month = String(curDate.getMonth() + 1).padStart(2, '0');
+            const day = String(curDate.getDate()).padStart(2, '0');
+            const formattedDate = `${year}-${month}-${day}`;
+
+            return {
+                ...user,
+                scan_date: formattedDate
+            };
+        });
         return res.status(200).send(mod)
     
        
@@ -365,17 +366,18 @@ const home = async (req, res) => {
                 return res.status(200).send([])
             }
 
-            const curDate = new Date(data[0].scan_date);
-            const year = curDate.getFullYear();
-            const month = String(curDate.getMonth() + 1).padStart(2, '0');
-            const day = String(curDate.getDate()).padStart(2, '0');
-            const formattedDate = `${year}-${month}-${day}`;
-                
-            console.log(formattedDate)
-            const mod = data.map(user => ({
-                ...user, 
-                scan_date: formattedDate
-            }))
+            const mod = data.map(user => {
+                const curDate = new Date(user.scan_date);
+                const year = curDate.getFullYear();
+                const month = String(curDate.getMonth() + 1).padStart(2, '0');
+                const day = String(curDate.getDate()).padStart(2, '0');
+                const formattedDate = `${year}-${month}-${day}`;
+    
+                return {
+                    ...user,
+                    scan_date: formattedDate
+                };
+            });
             return res.status(200).send(mod)
         
        
