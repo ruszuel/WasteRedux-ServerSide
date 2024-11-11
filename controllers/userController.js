@@ -3,11 +3,11 @@ import bcrypt from 'bcrypt';
 import nodemailer from 'nodemailer'
 import dotenv from 'dotenv'
 import jwt from 'jsonwebtoken'
-// import { Redis } from 'ioredis'
+
 
 const promisePool = database_config.promisePool
 dotenv.config();
-// const redis = new Redis(process.env.REDIS_URL)
+
 const display = async (req, res) => {
     try{
         const [result] = await promisePool.query('SELECT * from users')  
@@ -121,12 +121,14 @@ const autoLogin = async (req, res) => {
 const email = process.env.EMAIL;
 const pass = process.env.EMAIL_PASSWORD;
 const transporter = nodemailer.createTransport({
-    service: "gmail",
+    host: 'smtp.gmail.com', 
+    port: 587,
+    service: 'gmail',
     auth: {
         user: email,
         pass: pass
     },
-    secure: true
+    secure: false
 })
 
 const verification = (req, res) => {
@@ -139,15 +141,21 @@ const verification = (req, res) => {
         from: process.env.EMAIL,
         to: email_address,
         subject: 'Verify Your Email',
-        html: `<div style="font-family: Poppins, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
-        <h2 style="color: #41644A;">Dear User,</h2>
-        <p style="color: black;">Thank you for registering with us!</p>
-        <p style="color: black;">To complete your registration, please verify your email address by clicking the link below:</p>
-        <a href="${verifLink}" style="padding: 10px 10px; background-color: #81A969; color: white; text-decoration: none; border-radius: 5px; text-align: center;">Verify My Email</a>
-        <p style="color: black;">This link will expire in 5 minutes. If you did not create an account with us, please disregard this email.</p>
-        <p style="color: black;">If you have any questions, feel free to contact our support team.</p>
-        <p style="margin-top: 30px;color: black;">Best regards,<br>WasteRedux<br>wasteredux@gmail.com</p>
-        </div>`  
+        text: `Thank you for registering with us! Please verify your email: ${verifLink}`,
+        html: `
+        <html>
+            <body>
+                <div style="font-family: Poppins, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+                    <h2 style="color: #41644A;">Dear User,</h2>
+                    <p>Thank you for registering with us!</p>
+                    <p>To complete your registration, please verify your email address by clicking the link below:</p>
+                    <a href="${verifLink}" style="padding: 10px 10px; background-color: #81A969; color: white; text-decoration: none; border-radius: 5px; text-align: center;">Verify My Email</a>
+                    <p>This link will expire in 5 minutes. If you did not create an account with us, please disregard this email.</p>
+                    <p>If you have any questions, feel free to contact our support team.</p>
+                    <p style="margin-top: 30px;">Best regards,<br>WasteRedux</p>
+                </div>
+            </body>
+        </html>`  
     }
 
     transporter.sendMail(mailOptions, (err) => {
