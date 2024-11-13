@@ -11,7 +11,7 @@ const options = {
   connectionLimit: 10,
   maxIdle: 10,
   idleTimeout: 60000,
-  queueLimit: 50,
+  queueLimit: 0,
   enableKeepAlive: true,
   connectTimeout: 60000,
   keepAliveInitialDelay: 5000
