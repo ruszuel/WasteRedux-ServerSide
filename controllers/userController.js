@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import nodemailer from 'nodemailer'
 import dotenv from 'dotenv'
 import jwt from 'jsonwebtoken'
+import limiterMiddleware from './limiterMiddleware.js';
 
 
 const promisePool = database_config.promisePool
@@ -21,7 +22,7 @@ const insert = async (req, res) => {
     const receivedData = req.body
     try{
         const hashedPass = await bcrypt.hash(receivedData.user_password.trim(), 12)
-        await promisePool.query('INSERT INTO users (first_name, last_name, email_address, college_department, user_password, isVerified, isFirstTime, isSuspended) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [receivedData.first_name, receivedData.last_name, receivedData.email_address, receivedData.college_department, hashedPass, false, true, false])
+        await promisePool.query('INSERT INTO users (first_name, last_name, email_address, college_department, user_password, isVerified, isFirstTime, isSuspended, isWarned) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [receivedData.first_name, receivedData.last_name, receivedData.email_address, receivedData.college_department, hashedPass, false, true, false, false])
         res.status(200).send('inserted successfully') 
     }catch(err){
         res.status(500).send('Internal Server Error');
@@ -62,8 +63,8 @@ const login = async (req, res) => {
                     req.session.user = result[0]
                     return res.status(200).json({sessionId: req.session.id}) 
                 }
+                limiterMiddleware.limiter.resetKey(email_address)
                 req.session.user = result[0]
-                // redis.set('user', JSON.stringify(result[0]), 'EX', 10)
                 return res.sendStatus(200)
             })
         } 
@@ -309,8 +310,8 @@ const registerWaste = async (req, res) => {
             return res.sendStatus(403)
         }
 
-        await promisePool.query("INSERT INTO unrecognized_images (email_address, category, image, date_registered) VALUES (?, ?, ?, ?)", 
-            [req.session.user.email_address, category, buffer, registered_date]);
+        await promisePool.query("INSERT INTO unrecognized_images (email_address, category, image, date_registered, isArchived, isRecognized, isFlagged, isAddedToDataset) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", 
+            [req.session.user.email_address, category, buffer, registered_date, false, false, false, false]);
         
         return res.status(200).send('Image successfully inserted');
     } catch (err) {

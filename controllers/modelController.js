@@ -109,7 +109,7 @@ const predict = async (req, res) => {
 
         try {
             const date = getCurDate()
-            const [scanRes] = await promisePool.query("INSERT INTO scan_history(email_address, image, category, longitude, latitude, location, scan_date, waste_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [req.session.user.email_address, req.file.buffer, classType, long, lat, loc, date, wasteType])
+            const [scanRes] = await promisePool.query("INSERT INTO scan_history(email_address, image, category, longitude, latitude, location, scan_date, waste_type, isArchived) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", [req.session.user.email_address, req.file.buffer, classType, long, lat, loc, date, wasteType, false])
         } catch (error) {
             console.log('dberror:', error)
         }

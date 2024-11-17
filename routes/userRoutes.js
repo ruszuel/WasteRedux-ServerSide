@@ -3,6 +3,7 @@ import userController from '../controllers/userController.js'
 import verificationController from '../controllers/verificationController.js'
 import modelController from '../controllers/modelController.js'
 import multer from 'multer'
+import limiterMiddleware from '../controllers/limiterMiddleware.js'
 
 const storage = multer.memoryStorage()
 const upload = multer({storage})
@@ -10,7 +11,7 @@ const route = express.Router();
 
 route.get('/', userController.display);
 route.post('/create', userController.insert);
-route.post('/login', userController.login)
+route.post('/login', limiterMiddleware.limiter, userController.login)
 route.post('/verify', userController.verification)
 route.get('/verify/:token', userController.verifyEmail)
 route.get('/login/profile', userController.profile)
