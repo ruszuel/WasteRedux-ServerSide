@@ -32,26 +32,26 @@ const loadModel = async () => {
     }
 };
 
-const loadRecycModel = async () => {
-    try {
-        if(recyc_model){
-            recyc_model.dispose();
-        }
+// const loadRecycModel = async () => {
+//     try {
+//         if(recyc_model){
+//             recyc_model.dispose();
+//         }
 
-        recyc_model = await tf.node.loadSavedModel(path.join(__dirname, '..', 'recycModel'));
-        const testTensor = tf.zeros([32, 180, 180, 3]);
-        const testPred = model.predict(testTensor);
-        console.log('Recycle model loaded successfully');
+//         recyc_model = await tf.node.loadSavedModel(path.join(__dirname, '..', 'recycModel'));
+//         const testTensor = tf.zeros([32, 180, 180, 3]);
+//         const testPred = model.predict(testTensor);
+//         console.log('Recycle model loaded successfully');
         
-        testTensor.dispose();
-        testPred.dispose();
+//         testTensor.dispose();
+//         testPred.dispose();
 
-        return true;
-    } catch (error) {
-        console.error('Error loading model:', error);
-        throw error;
-    }
-}
+//         return true;
+//     } catch (error) {
+//         console.error('Error loading model:', error);
+//         throw error;
+//     }
+// }
 
 const getCurDate = () => {
     const curDate = new Date();
@@ -92,19 +92,19 @@ const predict = async (req, res) => {
         const classType = classLabels[predictedIndex]
         console.log(classType)
 
-        const recycPrediction = secondModel.predict(imgTensor)
-        const recycPredictionArr = await recycPrediction.array();
-        const peak = tf.tensor(recycPredictionArr)
-        const probabilities = peak.dataSync();
-        const highestProb = Math.max(...probabilities);
-        const predictedClass = probabilities.indexOf(highestProb);
-        const wasteType = recycClassLabels[predictedClass]
-        console.log(wasteType)
+        // const recycPrediction = secondModel.predict(imgTensor)
+        // const recycPredictionArr = await recycPrediction.array();
+        // const peak = tf.tensor(recycPredictionArr)
+        // const probabilities = peak.dataSync();
+        // const highestProb = Math.max(...probabilities);
+        // const predictedClass = probabilities.indexOf(highestProb);
+        // const wasteType = recycClassLabels[predictedClass]
+        // console.log(wasteType)
 
         res.json({
             success: true,
             prediction: classLabels[predictedIndex],
-            type: recycClassLabels[predictedClass]
+            // type: recycClassLabels[predictedClass]
         });
 
         try {
@@ -130,5 +130,5 @@ const predict = async (req, res) => {
 export default { 
     predict, 
     loadModel, 
-    loadRecycModel,
+    // loadRecycModel,
 };
