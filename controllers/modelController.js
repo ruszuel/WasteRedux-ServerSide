@@ -17,7 +17,7 @@ const loadModel = async () => {
             model.dispose();
         }
     
-        model = await tf.node.loadSavedModel(path.join(__dirname, '..', 'savedModel'));
+        model = await tf.loadGraphModel(`file://${path.join(__dirname, '..', 'savedModel', 'model.json')}`);
         const testTensor = tf.zeros([32, 180, 180, 3]);
         const testPred = model.predict(testTensor);
         console.log('Model loaded successfully:');
