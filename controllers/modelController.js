@@ -92,7 +92,7 @@ const predict = async (req, res) => {
         const classType = classLabels[predictedIndex]
         console.log(classType)
 
-        const recycPrediction = secondModel.predict(imgTensor)
+        const recycPrediction = recyc_model.predict(imgTensor)
         const recycPredictionArr = await recycPrediction.array();
         const peak = tf.tensor(recycPredictionArr)
         const probabilities = peak.dataSync();
