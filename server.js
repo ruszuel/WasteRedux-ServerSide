@@ -47,6 +47,7 @@ app.use('/user', userRoutes);
 
 app.listen(port, async () => {
   await loadModel.loadModel()
+  await loadModel.loadRecycModel()
   console.log(`listening to port ${port}`)
 })
 
