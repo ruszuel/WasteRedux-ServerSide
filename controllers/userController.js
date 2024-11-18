@@ -368,7 +368,7 @@ const home = async (req, res) => {
     if(!req.session.user) return res.sendStatus(401)
     
     try {
-        const [data] = await promisePool.query("SELECT category, scan_date, waste_type FROM scan_history WHERE email_address=? ORDER BY id DESC LIMIT 3", [req.session.user.email_address])
+        const [data] = await promisePool.query("SELECT category, scan_date, waste_type FROM scan_history WHERE email_address=? ORDER BY id DESC LIMIT 5", [req.session.user.email_address])
            
             if(!data|| data.length === 0){
                 console.log('no history')
