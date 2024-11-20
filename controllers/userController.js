@@ -45,10 +45,6 @@ const login = async (req, res) => {
             return
         }
 
-        const isWarned = result[0].isWarned
-        if(parseInt(isWarned) === 1){
-            return res.sendStatus(204)
-        }
 
         const isValid = await bcrypt.compare(user_password.trim(), result[0].user_password)
         if(!isValid){
@@ -67,6 +63,12 @@ const login = async (req, res) => {
                     req.session.cookie.maxAge = 7 * 24 * 60 * 60 * 1000
                     req.session.user = result[0]
                     return res.status(200).json({sessionId: req.session.id}) 
+                }
+                const isWarned = result[0].isWarned
+                if(parseInt(isWarned) === 1){
+                    req.session.user = result[0]
+                    console.log("bossing no content")
+                    return res.sendStatus(204)
                 }
                 limiterMiddleware.limiter.resetKey(email_address)
                 req.session.user = result[0]
