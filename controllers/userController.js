@@ -45,6 +45,11 @@ const login = async (req, res) => {
             return
         }
 
+        const isWarned = result[0].isWarned
+        if(parseInt(isWarned) === 1){
+            return res.sendStatus(204)
+        }
+
         const isValid = await bcrypt.compare(user_password.trim(), result[0].user_password)
         if(!isValid){
             res.status(401).send('Wrong password')
