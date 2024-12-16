@@ -78,7 +78,7 @@ const predict = async (req, res) => {
 
     const {lat, long, loc} = req.body
     try {
-        const classLabels = ['Glass', 'Metal', 'Plastic'];
+        const classLabels = ['Glass', 'Metal', 'Plastic', 'Unrecognizable'];
         const recycClassLabels = ['Disposable', 'Recyclable'];
 
         const imgTensor = tf.node.decodeImage(req.file.buffer, 3).resizeBilinear([180, 180]).toFloat().expandDims()
@@ -100,7 +100,8 @@ const predict = async (req, res) => {
         const predictedClass = probabilities.indexOf(highestProb);
         const wasteType = recycClassLabels[predictedClass]
         console.log(wasteType)
-
+        
+        console.log(classLabels[predictedIndex])
         res.json({
             success: true,
             prediction: classLabels[predictedIndex],
