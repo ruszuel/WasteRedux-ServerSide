@@ -72,7 +72,7 @@ const login = async (req, res) => {
                 }
                 limiterMiddleware.limiter.resetKey(email_address)
                 req.session.user = result[0]
-                return res.sendStatus(200)
+                return res.status(200).json({frstme: result[0].isFirstTime})
             })
         } 
     }catch(err){
