@@ -55,14 +55,14 @@ const login = async (req, res) => {
         const isFirstTime = result[0].isFirstTime
         if(parseInt(isFirstTime) === 1){
             req.session.email = result[0].email_address
-            return res.sendStatus(201)
+            return res.status(201).json({frstme: result[0].isFirstTime})
         }else{
             req.session.regenerate((err) => {
                 if (err) return res.status(500).send("Failed regenerating session")
                 if(rememberme){     
                     req.session.cookie.maxAge = 7 * 24 * 60 * 60 * 1000
                     req.session.user = result[0]
-                    return res.status(200).json({sessionId: req.session.id}) 
+                    return res.status(200).json({sessionId: req.session.id, frstme: result[0].isFirstTime}) 
                 }
                 const isWarned = result[0].isWarned
                 if(parseInt(isWarned) === 1){
