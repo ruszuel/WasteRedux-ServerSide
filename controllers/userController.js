@@ -120,6 +120,11 @@ const autoLogin = async (req, res) => {
         if (result.length === 0) {
             return res.status(201).send("Session expired");
         }
+
+        if(parseInt(result[0].isArchived) === 1) {
+            return res.status(423).send('Account locked')
+        }
+
         const session_data = JSON.parse(result[0].data)
         req.session.autolog = session_data.user
         return res.sendStatus(200);
