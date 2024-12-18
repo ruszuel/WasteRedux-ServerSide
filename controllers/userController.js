@@ -52,6 +52,11 @@ const login = async (req, res) => {
             return
         }
 
+        if(parseInt(result[0].isArchived) === 1){
+            return res.status(423).send('Account locked')
+            
+        }
+
         const isFirstTime = result[0].isFirstTime
         if(parseInt(isFirstTime) === 1){
             req.session.email = result[0].email_address
