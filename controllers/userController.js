@@ -121,17 +121,26 @@ const autoLogin = async (req, res) => {
             return res.status(201).send("Session expired");
         }
 
-        if(parseInt(result[0].isArchived) === 1) {
+        const session_data = JSON.parse(result[0].data)
+
+        const user_res = await promisePool.query("SELECT * from users WHERE email_address = ?", [session_data.user.email_address]);
+        console.log(user_res[0][0].isWarned);
+        
+        if(parseInt(user_res[0][0].isArchived) === 1) {
             return res.status(423).send('Account locked')
         }
 
-        const session_data = JSON.parse(result[0].data)
-        req.session.autolog = session_data.user
+        if(parseInt(user_res[0][0].isWarned) === 1){
+            return res.status(403).send('Warning')
+        }
+
+        req.session.autolog = user_res[0][0]
         return res.sendStatus(200);
     } catch (err) {
         if(err.code === 'ECCONRESET'){
             return res.status(500).json({ message: 'Database connection error. Please try again.' });
         }   
+        console.log(err)
         return res.status(500).send(err);
     }
 };
@@ -153,7 +162,7 @@ const verification = (req, res) => {
     const {email_address} = req.body
     const email = {email: email_address}
     const accessToken = jwt.sign(email, process.env.SECRET_ACCESS_TOKEN, {expiresIn: '5m'})
-    const verifLink = `https://seal-app-uuotj.ondigitalocean.app/user/verify/${accessToken}`
+    const verifLink = `https://wasteredux-wl7q8.ondigitalocean.app/user/verify/${accessToken}`
 
     const mailOptions = {
         from: process.env.EMAIL,
