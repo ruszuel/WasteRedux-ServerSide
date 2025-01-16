@@ -134,7 +134,7 @@ const autoLogin = async (req, res) => {
             return res.status(403).send('Warning')
         }
 
-        req.session.autolog = user_res[0][0]
+        req.session.autolog = session_data.user
         return res.sendStatus(200);
     } catch (err) {
         if(err.code === 'ECCONRESET'){
